@@ -1,0 +1,194 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <style>
+	*{
+		transition: margin 0.5s;
+		-webkit-transition: margin 0.5s; /* Safari */
+	}
+    body {
+        margin: 0px;
+        padding: 0px;
+		font-family: "Trebuchet MS", "Helvetica", "Arial",  "Verdana", "sans-serif";
+		font-size: 62.5%;
+    }
+	.kineticjs-content{
+		border:1px dotted black;
+	}
+	#side{
+		width:100px;
+		height:800px;
+		background:white;
+		float:left;
+		border:1px dotted black;
+		border-right:0px dotted black;
+	}
+	#side:hover{
+		
+	}
+	#side .badge{
+		display:block;
+		width: 100px;
+		float:left;
+		height:50px;		
+		color: #CCFFCC;
+		text-align: center;
+		line-height:50px;
+		display:table;
+		-moz-border-radius: 12px;
+		-webkit-border-radius: 12px;
+		border-radius: 12px;
+		font-weight: bold;
+		cursor:pointer;
+		margin-bottom: 5px;
+		font-size: 140%;
+		font-weight: bold;
+		font-variant: small-caps;
+	}		
+	#side .badge p {
+		display: table-cell; 
+		vertical-align: middle; 
+		text-align: center; 
+	}
+	#side .selected {
+		background: #999999 !important; 
+	}
+	#side .btn{
+		background: #99CC99;
+	}
+	#side .btn:hover{
+		background: #999999;
+	}	
+	/*FORM*/
+	fieldset { padding:0; border:0; margin-top:25px; }
+	fieldset input ,select{ display:block; margin-bottom:12px; width:95%; padding: .4em;}	
+    fieldset h1 { font-size: 1.2em; margin: .6em 0; }
+    </style>
+  </head>
+  <body>
+	<div id="side">		
+		<div id="addLineButton" class="badge btn"><p>+</p></div>
+	</div>
+    <div id="container">
+	</div>
+	
+	<script src="jquery-1.10.2.min.js"></script>
+	<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/cupertino/jquery-ui.css" />
+	<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+	<script src="kinetic-v4.5.4.min.js"></script>
+	<script src="requestAnimationFrame.js"></script>
+	<script src="globals.js"></script>
+	<script src="model.js"></script>
+	<script src="grid.js"></script>
+	<script src="stateManager.js"></script>
+	<script src="event.js"></script>	
+	<script src="movieAPI.js"></script>
+    <script defer="defer">
+	var $time = function() {return +new Date;};
+	var mode = 'ADD'; //ADD - DRAG - INFO
+	document.addEventListener('contextmenu', function(evt) { 
+	  evt.preventDefault();
+	}, false);
+	
+	$(document).ready(function(){
+		/*MAIN STAGE*/
+		var stage = new Kinetic.Stage({
+			container: 'container',
+			width: 800,
+			height: 800,
+			draggable:false
+		});
+		var map = new Map('Roma', stage);	
+		/*GLOBALS*/	
+		GLOBALS.grid = map.grid;
+		GLOBALS.sm = map.stateManager;
+		GLOBALS.api = new MovieApi();
+		console.info(GLOBALS.api.baseURL);
+		map.draw();
+		
+		/*HTML UI*/
+		$('#modal-form-new-line').dialog({autoOpen:false, position: { my: "left top", at: "right top", of: $('#side') }});
+		$('#modal-form-new-line-create-user').button();
+		$('#modal-form-new-line-create-user').click(function(){
+			var name=$('#name').val();
+			var color =$('#color').val();
+			var set = map.addSet(name,color);//create 
+			var badge = $('<div id="line_'+name+'" name="'+name+'" style="background: '+color+'" class="badge"><p>'+name+'</p></div>');
+			$("#side").append(badge);
+			badge.click(function(){
+				if (badge.hasClass('selected')){
+					badge.removeClass('selected');					
+					GLOBALS.sm.changeState(StateEnum.START);
+				}else{
+					$('.selected').removeClass('selected');//deselect other sets
+					badge.addClass('selected');
+					GLOBALS.sm.changeState(StateEnum.SETSELECTED, {'set': set});
+					
+				}			
+			});
+			
+			
+			$('#modal-form-new-line').dialog( "close" );
+		});
+		
+		$('#addLineButton').click(function(event){			
+			$('#modal-form-new-line').dialog( "open" );
+		});		
+		
+	});
+    </script>
+	
+	
+	
+	<!-- MODAL FORMS -->
+	<div id="modal-form-new-line" title="Create new set">
+		<p class="validateTips">All form fields are required.</p> 		
+		  <fieldset>
+		  <label for="name">Name</label>
+		  <input type="text" name="name" id="name" class="text ui-widget-content ui-corner-all" />
+		  <label for="color">Color</label>
+		  <select name="color" id="color" class="select ui-widget-content ui-corner-all">
+			<option>Red</option>
+			<option>Blue</option>
+		  </select>
+		  </fieldset>
+		  <button id="modal-form-new-line-create-user">Create new set</button>		
+	</div>
+	
+	
+	
+  </body>
+</html>
+
+
+<!--
+	/*
+	
+	var stopsA = new Array();
+
+	var stopsB = new Array();
+
+
+	
+	var lineaA = metro.addLine('A','red');
+	var lineaB = metro.addLine('B','blue');
+	
+	
+	stopsA.push(lineaA.addEntity("Battistini",80,80));
+	stopsA.push(lineaA.addEntity("Cornelia",160,160));
+	var termini = lineaA.addEntity("Termini",240,240)
+	stopsA.push(termini);
+	stopsA.push(lineaA.addEntity("V.Emanuele",320,320));
+	stopsA.push(lineaA.addEntity("Furio Camillo",360,360));
+	
+	
+	stopsB.push(lineaB.addEntity("Laurentina",80,360));
+	stopsB.push(lineaB.addEntity("Colosseo",160,320));
+	var termini = lineaB.pushEntity(termini);
+	stopsB.push(lineaB.addEntity("Bologna",360,160));	
+	stopsB.push(lineaB.addEntity("Rebibbia",360,80));	
+	
+	
+	console.info(lineaA);
+	*/
+-->
