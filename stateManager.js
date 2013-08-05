@@ -1,3 +1,4 @@
+/*! stateManager.js | (c) 2013 g.urbano / www.gurbano.it */
 var StateEnum = {
 	DEFAULT: 0,
 	START : 1,
@@ -44,14 +45,26 @@ function StartState(){
 	this.preventDefault = false;
 }
 function DefaultState(){
-	var self = this;
+	var _self = this;
 	this.enter = function(){
 		console.info('Enter DefaultState');
-		/*STOP*/
+		/*when an entity is dragged */
 		Entity.prototype.dragend = function(self,event){
-			GLOBALS.grid.snapObject(self.obj);
-			self.forEachLine(function(line,context){line.entityDragged(context);});
+			GLOBALS.grid.snapObject(self.obj); //snapped to the grid
+			self.forEachSet(function(set,context){set.entityDragged(context);}); //notify each set the entity belongs that the entity has been dragged around. See comment below.
 		}
+		/*
+				a different state could redefine the way each set handle the event:
+				eg:
+				Set.prototype.entityDragged = function(entity){
+					this.forEachLink(function(link,context){
+						if (link.connectEntity(entity.id)){
+							link.refresh();
+						}		
+					});
+				};
+			*/	
+		
 		Entity.prototype.leftclick = function(self,event){};
 		/*LINK ANCHOR*/
 		LinkAnchor.prototype.dragend = function(self,event){self.link.refresh();} //Redraw the link once the control point is dragged around
@@ -70,26 +83,41 @@ function DefaultState(){
 }
 /*Set selected*/
 function SetSelectedState(){
-	var self = this;
+	var _self = this;
+	this.set = undefined;
 	this.enter = function(params){
 		console.info('Enter SetSelectedState', params);
+		_self.set = params.set;
 		Map.prototype._leftclick = Map.prototype.leftclick;
-		Map.prototype.leftclick = function(self,event){
+		Map.prototype.leftclick = function(self,event){			
+			$('#modal-form-add-actor').dialog( "open" );		
+			$('#actor_name').val('');
 			/*add actor*/		
-			GLOBALS.api.searchCast({query:'Sylvester Stallone'},function(err, result){
-				if(!err){
-					console.info(result);			
-				}
-			});
-			
+				$(document).off('ACTOR_ADDED').on('ACTOR_ADDED',function(ev,params){
+				$(document).off('ACTOR_ADDED'); //Detach listener
+				console.info('Actor added',params.item.id);
+				_self.set.addActor(params.item.id,event.x,event.y,function(){});
+			});		
+		};
+		Map.prototype.rightclick = function(self,event){			
+			$('#modal-form-add-movie').dialog( "open" );		
+			$('#movie_name').val('');
+			/*add actor*/		
+				$(document).off('MOVIE_ADDED').on('MOVIE_ADDED',function(ev,params){
+				$(document).off('MOVIE_ADDED'); //Detach listener
+				console.info('Movie added',params.item.id);
+				_self.set.addMovie(params.item.id,event.x,event.y,function(){});
+			});		
+		};
+		//Entity.prototype.rightclick = function(self,event){self.showMenu();}
+		Entity.prototype.leftclick = function(self,event){self.showMenu();}
+		Entity.prototype.mouseenter = function(self,event){document.body.style.cursor = 'pointer';}
+		Entity.prototype.mouseleave = function(self,event){ document.body.style.cursor = 'default';}
 		
-		}
 	}
 	this.exit = function(){
 		console.info('Exit SetSelectedState');
 		Map.prototype.leftclick = Map.prototype._leftclick;
 	}
-	this.preventDefault = false;
-	
-	
+	this.preventDefault = false;	
 }

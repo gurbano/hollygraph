@@ -108,6 +108,60 @@
 		
 		/*HTML UI*/
 		$('#modal-form-new-line').dialog({autoOpen:false, position: { my: "left top", at: "right top", of: $('#side') }});
+		$('#modal-form-add-actor').dialog({autoOpen:false, position: { my: "left top", at: "right top", of: $('#side') }});
+		$('#modal-form-add-movie').dialog({autoOpen:false, position: { my: "left top", at: "right top", of: $('#side') }});
+		$("#actor_name").autocomplete({
+			source: function( request, response ) {
+				var queryString = request.term;
+				GLOBALS.api.searchCast({query: queryString},function(data){
+					var ret = [];
+					for (var i=0; i<data.results.length; i++){
+						ret.push({label: data.results[i].name,value: data.results[i].name, id :data.results[i].id})
+					}
+					response(ret);	
+				});
+			},
+			minLength: 5,
+			select: function( event, ui ) {
+				if (ui.item){
+					$(document).trigger('ACTOR_ADDED',{item: ui.item});
+					$('#modal-form-add-actor').dialog( "close" );
+				}
+			},
+			open: function() {
+			   $( this ).removeClass( "ui-corner-all" ).addClass( "ui-corner-top" );
+			},
+			close: function() {
+			   $( this ).removeClass( "ui-corner-top" ).addClass( "ui-corner-all" );
+			}
+		});
+		$("#movie_name").autocomplete({
+			source: function( request, response ) {
+				var queryString = request.term;
+				GLOBALS.api.searchMovie({query: queryString},function(data){
+					var ret = [];
+					for (var i=0; i<data.results.length; i++){
+						ret.push({label: data.results[i].title + '('+data.results[i].release_date.substr(0,4) +')'
+							,value: data.results[i].name, id :data.results[i].id})
+					}
+					response(ret);	
+				});
+			},
+			minLength: 5,
+			select: function( event, ui ) {
+				if (ui.item){
+					$(document).trigger('MOVIE_ADDED',{item: ui.item});
+					$('#modal-form-add-movie').dialog( "close" );
+				}
+			},
+			open: function() {
+			   $( this ).removeClass( "ui-corner-all" ).addClass( "ui-corner-top" );
+			},
+			close: function() {
+			   $( this ).removeClass( "ui-corner-top" ).addClass( "ui-corner-all" );
+			}
+		});
+		
 		$('#modal-form-new-line-create-user').button();
 		$('#modal-form-new-line-create-user').click(function(){
 			var name=$('#name').val();
@@ -125,15 +179,33 @@
 					GLOBALS.sm.changeState(StateEnum.SETSELECTED, {'set': set});
 					
 				}			
-			});
-			
-			
+			});			
 			$('#modal-form-new-line').dialog( "close" );
 		});
 		
 		$('#addLineButton').click(function(event){			
 			$('#modal-form-new-line').dialog( "open" );
 		});		
+		
+		
+		
+		
+		
+		
+		
+		var hollywood = map.addSet('Hollywood','red');
+		GLOBALS.sm.changeState(StateEnum.SETSELECTED, {'set': hollywood});
+		hollywood.addActor(16483,100,100,function(actor){
+			console.info(actor);
+		});
+		hollywood.addActor(1101,700,700,function(actor){
+			console.info(actor);
+		});
+		
+		
+		//hollywood.addMovie(1367,230,230,function(movie){
+		//	console.info(movie);
+		//});
 		
 	});
     </script>
@@ -153,6 +225,22 @@
 		  </select>
 		  </fieldset>
 		  <button id="modal-form-new-line-create-user">Create new set</button>		
+	</div>
+	<div id="modal-form-add-actor" title="Add Actor">	
+		  <fieldset>
+		  <label for="name">Name</label>
+		  <input type="text" name="name" id="actor_name" class="text ui-widget-content ui-corner-all" />
+		  
+		  </fieldset>
+	
+	</div>
+	<div id="modal-form-add-movie" title="Add Movie">	
+		  <fieldset>
+		  <label for="name">Name</label>
+		  <input type="text" name="name" id="movie_name" class="text ui-widget-content ui-corner-all" />
+		  
+		  </fieldset>
+	
 	</div>
 	
 	

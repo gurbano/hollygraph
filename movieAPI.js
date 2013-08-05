@@ -15,6 +15,7 @@ function MovieApi(){
 			dataType: 'JSON'		
 		});
 	}
+	//Search cast
 	this.searchCast = function(params,callback){
 		self.encapsulateRequest(params,function(params){
 			$.ajax({
@@ -25,7 +26,40 @@ function MovieApi(){
 			});			
 		})	
 	}
+	this.searchMovie = function(params,callback){
+		self.encapsulateRequest(params,function(params){
+			$.ajax({
+				url: self.baseURL + "search/movie",
+				data: params,
+				success: callback,
+				dataType: 'JSON'		
+			});			
+		})	
+	}
+	//Get cast
+	this.getCast = function(params,callback){
+		self.encapsulateRequest(params,function(params){
+			$.ajax({
+				url: self.baseURL + "person/"+params.id,
+				data: params,//api_key, append_to_response=credits
+				success: callback,
+				dataType: 'JSON'		
+			});			
+		})	
+	}
+	//Get movie
+	this.getMovie = function(params,callback){
+		self.encapsulateRequest(params,function(params){
+			$.ajax({
+				url: self.baseURL + "movie/"+params.id,
+				data: params,//api_key, append_to_response=credits
+				success: callback,
+				dataType: 'JSON'		
+			});			
+		})	
+	}
 	this.encapsulateRequest = function(params, callback){
+		if (params.query){params.query = '*'+params.query+'*';}
 		if (!self.token){
 			self.requestNewToken(function(data){
 				self.token = data;
@@ -40,7 +74,7 @@ function MovieApi(){
 		}
 		
 	}
-	this.searchCast({query:'Sylvester Stallone'},function(data){
-		console.info(data);
-	});
+	//this.searchCast({query:'Sylvester Stallone'},function(data){
+	//	console.info(data);
+	//});
 }

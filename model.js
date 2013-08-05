@@ -8,7 +8,7 @@ function Point(x,y){
 }
 
 
-var LINK_WIDTH = 5;
+var LINK_WIDTH = 2;
 
 function LinkAnchor(parentLink,_x,_y, visibility){
 	var self = this;
@@ -116,9 +116,13 @@ function Entity(set, name,x,y){
 	this.name = name;
 	this._id = function(){return "_STOP_"+this.name;}
 	this.id = this._id();
-	this.type = "END";
-	this.setType = function(type){
-		this.type=type;
+	this.dType = "END"; //DRAW TYPE
+	this.eType = "ACTOR"; //ENTITY TYPE
+	this.setDrawType = function(type){
+		this.dType=type;
+	}
+	this.setEntityType = function(type){
+		this.eType=type;
 	}
 	this.nextEntity = undefined;
 	this.setNext = function(entity){
@@ -135,7 +139,7 @@ function Entity(set, name,x,y){
 		draggable:true,
 		drawFunc: function(canvas){			
 			var context = canvas.getContext();					
-			switch(self.type){
+			switch(self.dType){
 				case 'SIMPLE_LINE': 								
 					context.beginPath();	
 					context.moveTo(0, 0);
@@ -167,7 +171,10 @@ function Entity(set, name,x,y){
 					break;
 				case 'END': 
 					context.beginPath();	
-					context.arc(0, 0, END_STATION_RADIUS, 0, 2 * Math.PI);					
+					if (self.eType==='ACTOR')
+						context.arc(0, 0, END_STATION_RADIUS, 0, 2 * Math.PI);					
+					if (self.eType==='MOVIE')
+						context.arc(0, 0, END_STATION_RADIUS-1, 0, 2 * Math.PI);					
 					context.closePath();
 					canvas.fillStroke(this);
 					self.drawName(context);
@@ -196,17 +203,22 @@ function Entity(set, name,x,y){
 		id : this.id,
 		entity : this
 	});
-	//GLOBALS.bind('click',this.obj,self);
 	this.x = function(){return this.obj.attrs.x;}
 	this.y = function(){return this.obj.attrs.y;}
 	this.getPoint = function(){return new Point(this.x(),this.y())};
 	this.forEachSet = function(callback){
-		for(var i=0; i<self.lines.length; i++){
-			callback(self.lines[i],self);
+		for(var i=0; i<self.sets.length; i++){
+			callback(self.sets[i],self);
 		}
 	};
+	
+	this.showMenu = function(){
+			
+	}
 	GLOBALS.bind('dragend',this.obj,self);
 	GLOBALS.bind('click',this.obj, self);
+	GLOBALS.bind('mouseenter',this.obj,self);
+	GLOBALS.bind('mouseleave',this.obj, self);
 
 }
 function Set(map, name, color){
@@ -216,13 +228,26 @@ function Set(map, name, color){
 	this.linksLayer = new Kinetic.Layer();
 	this.name = name;
 	this.entitys = new Array();
+	this.actors = new Array();
+	this.movies = new Array();
 	this.links = new Array();
 	this.color = color || "red";
+	this.autoLink = false;
 	this._id = function(){return "LINE_"+this.name;}
 	this.id = this._id();	
 	this.forEachEntity = function(callback){
 		for(var i=0; i<self.entitys.length; i++){
 			callback(self.entitys[i],self);
+		}
+	};
+	this.forEachActor = function(callback){
+		for(var i=0; i<self.actors.length; i++){
+			callback(self.actors[i],self);
+		}
+	};
+	this.forEachMovie = function(callback){
+		for(var i=0; i<self.movies.length; i++){
+			callback(self.movies[i],self);
 		}
 	};
 	this.forEachLink = function(callback){
@@ -236,28 +261,77 @@ function Set(map, name, color){
 				link.refresh();
 			}		
 		});
-		//this.linksLayer.draw();
 	};	
 	this.recomputeEntityTypes = function(){
+		self.forEachActor(function(actor, context){
+			self.forEachMovie(function(movie, context){
+				for (var i=0; i<actor.movies.length; i++){
+					if(actor.movies[i].id===movie.data.id){
+						self.linkEntitys(actor,movie);
+					}
+				}		
+			});			
+		});
+	
 		/*SET STOPS TYPES*/
 		this.forEachEntity(function(entity, context){
-			entity.setType('SIMPLE');
+			entity.setDrawType('SIMPLE');
 			/*If the entity is connected to more than one set then it's a switch*/
 			if (entity.sets.length>1){
-				entity.setType('SWITCH');
+				entity.setDrawType('SWITCH');
 			}
 		});
-		this.getLastEntity().setType('END');
-		this.getFirstEntity().setType('END');
+		this.getLastEntity().setDrawType('END');
+		this.getFirstEntity().setDrawType('END');
 	}	
 	this.addEntity = function(name,x,y){
 		var tmp = new Entity(this, name,x,y); //Create the entity
-		this.entitys.push(tmp); //Push it in the entitys array
-		if (this.getLastEntity() && this.getBeforeLastEntity()){this.linkEntitys(this.getLastEntity(),this.getBeforeLastEntity());} //Automatically link to last station
-		this.entitysLayer.add(tmp.obj); //Add to layer
-		this.recomputeEntityTypes();//recompute entity types	
-		this.entitysLayer.draw(); //redraw
+		self.entitys.push(tmp); //Push it in the entitys array
+		if(self.autoLink){
+			if (self.getLastEntity() && self.getBeforeLastEntity()){self.linkEntitys(self.getLastEntity(),self.getBeforeLastEntity());} //Automatically link to last station
+		}
+		self.entitysLayer.add(tmp.obj); //Add to layer		
+		self.recomputeEntityTypes();//recompute entity types	
+		self.entitysLayer.draw(); //redraw
 		return tmp;
+	}
+	this.addActor = function(_id,x,y, callback){
+		GLOBALS.api.getCast({append_to_response:'credits',id:_id}, function(data){
+			var tmp = new Entity(self, data.name,x,y); //Create the entity
+			tmp.setEntityType("ACTOR");
+			tmp.data = data;
+			var credits = data.credits.cast; //Movies array
+			tmp.movies = [];
+			for( var i=0; i<credits.length; i++){
+				tmp.movies.push({id: credits[i].id, title:credits[i].title, data: credits[i]});
+			}
+			self.entitys.push(tmp); //Push it in the entitys array
+			self.actors.push(tmp); //Push it in the entitys array
+			if(self.autoLink){
+				if (self.getLastEntity() && self.getBeforeLastEntity()){self.linkEntitys(self.getLastEntity(),self.getBeforeLastEntity());} //Automatically link to last station
+			}
+			self.entitysLayer.add(tmp.obj); //Add to layer		
+			self.recomputeEntityTypes();//recompute entity types	
+			self.entitysLayer.draw(); //redraw
+			callback(tmp);		
+		});		
+	}
+	this.addMovie = function(_id,x,y, callback){
+		GLOBALS.api.getMovie({append_to_response:'credits',id:_id}, function(data){
+			var tmp = new Entity(self, data.title,x,y); //Create the entity
+			tmp.setEntityType("MOVIE");
+			
+			tmp.data = data;
+			self.entitys.push(tmp); //Push it in the entitys array
+			self.movies.push(tmp); //Push it in the entitys array
+			if(self.autoLink){
+				if (self.getLastEntity() && self.getBeforeLastEntity()){self.linkEntitys(self.getLastEntity(),self.getBeforeLastEntity());} //Automatically link to last station
+			}
+			self.entitysLayer.add(tmp.obj); //Add to layer		
+			self.recomputeEntityTypes();//recompute entity types	
+			self.entitysLayer.draw(); //redraw
+			callback(tmp);		
+		});		
 	}
 	this.pushEntity =function(entity){
 		entity.sets.push(this); //Add the set
@@ -293,6 +367,8 @@ function Set(map, name, color){
 		if (this.entitys.length>1){ return this.entitys[this.entitys.length-2]}
 		else return undefined;
 	}
+	
+	
 }
 function Map(name, stage){
 	var self = this;

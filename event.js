@@ -1,3 +1,8 @@
+/*
+
+
+*/
+
 var EventTypeEnum = {
 	MOUSEUP : 'click',
 	DRAGSTART : 'dragstart',
